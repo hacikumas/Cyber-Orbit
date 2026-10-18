@@ -1,0 +1,2196 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBER ORBIT // Siber Dairesel Pist</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #030308;
+            font-family: 'Orbitron', 'Rajdhani', sans-serif;
+            color: #fff;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at center, #090918 0%, #020206 100%);
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        /* Cyberpunk Scanlines & Vignette */
+        .scanlines {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.22) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+            background-size: 100% 3px, 6px 100%;
+            z-index: 20;
+            opacity: 0.7;
+        }
+
+        .vignette {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(circle at center, transparent 60%, rgba(0, 0, 5, 0.8) 100%);
+            z-index: 21;
+        }
+
+        /* --- HUD LAYER (Pistin hiçbir yerini kapatmayacak şekilde konumlandırıldı) --- */
+        .hud-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px 28px;
+        }
+
+        /* ÜST HUD PANORAMA */
+        .top-hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            gap: 16px;
+        }
+
+        /* SOL ÜST: CANLAR & YAKIT DEPOSU */
+        .left-hud-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .tires-container {
+            background: rgba(10, 10, 24, 0.8);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.2), inset 0 0 10px rgba(0, 243, 255, 0.05);
+            border-radius: 12px;
+            padding: 10px 16px;
+            backdrop-filter: blur(8px);
+        }
+
+        .hud-label {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #00f3ff;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .hud-label::before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            background: #00f3ff;
+            box-shadow: 0 0 8px #00f3ff;
+        }
+
+        .hud-label.fuel-label {
+            color: #ffe600;
+        }
+        .hud-label.fuel-label::before {
+            background: #ffe600;
+            box-shadow: 0 0 8px #ffe600;
+        }
+
+        .tires-grid {
+            display: flex;
+            gap: 10px;
+        }
+
+        .tire-icon {
+            width: 28px;
+            height: 42px;
+            position: relative;
+            background: #111422;
+            border: 2px solid #00f3ff;
+            border-radius: 6px;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.5), inset 0 0 6px rgba(0, 243, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .tire-icon::before {
+            content: '';
+            width: 12px;
+            height: 20px;
+            background: #1a1e36;
+            border: 2px solid #ff007f;
+            border-radius: 3px;
+            box-shadow: 0 0 5px #ff007f;
+        }
+
+        .tire-treads {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            padding: 3px 0;
+            pointer-events: none;
+        }
+
+        .tread {
+            width: 100%;
+            height: 2px;
+            background: rgba(0, 243, 255, 0.35);
+        }
+
+        .tire-icon.popped {
+            border-color: #331520;
+            background: #150a0f;
+            box-shadow: none;
+            opacity: 0.3;
+            transform: scale(0.85);
+            filter: grayscale(90%);
+        }
+
+        .tire-icon.popped::before {
+            border-color: #551122;
+            background: #200810;
+            box-shadow: none;
+        }
+
+        /* YAKIT (FUEL) GÖSTERGE KARTI */
+        .fuel-container {
+            background: rgba(10, 10, 24, 0.8);
+            border: 1px solid rgba(255, 230, 0, 0.4);
+            box-shadow: 0 0 15px rgba(255, 230, 0, 0.15);
+            border-radius: 12px;
+            padding: 10px 16px;
+            backdrop-filter: blur(8px);
+            min-width: 160px;
+        }
+
+        .fuel-bar-bg {
+            width: 100%;
+            height: 12px;
+            background: #121420;
+            border: 1px solid rgba(255, 230, 0, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .fuel-bar-fill {
+            height: 100%;
+            width: 100%;
+            background: linear-gradient(90deg, #ff0044, #ffe600, #ffe600);
+            box-shadow: 0 0 12px #ffe600;
+            transition: width 0.1s linear;
+        }
+
+        .fuel-stats-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            font-weight: 700;
+            color: #ffe600;
+            margin-top: 5px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* ÜST ORTA STATS */
+        .top-center-stats {
+            display: flex;
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: rgba(10, 10, 24, 0.8);
+            border: 1px solid rgba(255, 0, 127, 0.4);
+            box-shadow: 0 0 15px rgba(255, 0, 127, 0.15);
+            border-radius: 12px;
+            padding: 8px 16px;
+            backdrop-filter: blur(8px);
+            text-align: center;
+            min-width: 120px;
+        }
+
+        .stat-card.cyan-card {
+            border-color: rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.15);
+        }
+
+        .stat-card.yellow-card {
+            border-color: rgba(255, 230, 0, 0.4);
+            box-shadow: 0 0 15px rgba(255, 230, 0, 0.15);
+        }
+
+        /* GOD MODE ROZETİ */
+        .godmode-badge {
+            background: linear-gradient(90deg, #ffe600, #ff007f);
+            color: #050512;
+            font-weight: 900;
+            font-size: 11px;
+            letter-spacing: 2px;
+            padding: 6px 14px;
+            border-radius: 20px;
+            cursor: pointer;
+            box-shadow: 0 0 20px #ffe600, 0 0 30px #ff007f;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            pointer-events: auto;
+        }
+
+        .godmode-badge.inactive {
+            background: rgba(15, 15, 30, 0.7);
+            color: #7982a9;
+            box-shadow: none;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .stat-title {
+            font-size: 10px;
+            letter-spacing: 2px;
+            color: #8892b0;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 900;
+            color: #fff;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .stat-value.magenta {
+            color: #ff007f;
+            text-shadow: 0 0 12px #ff007f;
+        }
+
+        .stat-value.cyan {
+            color: #00f3ff;
+            text-shadow: 0 0 12px #00f3ff;
+        }
+
+        .stat-unit {
+            font-size: 11px;
+            font-weight: 700;
+            opacity: 0.8;
+        }
+
+        /* SAĞ ÜST: KOMPAKT ANLIK HIZ VE SES */
+        .right-hud-panel {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        /* HARİTAYI ASLA KAPATMAYAN KOMPAKT ANLIK HIZ PANELİ */
+        .compact-speed-card {
+            background: rgba(10, 10, 24, 0.85);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 18px rgba(0, 243, 255, 0.2);
+            border-radius: 12px;
+            padding: 10px 18px;
+            backdrop-filter: blur(8px);
+            text-align: right;
+            min-width: 150px;
+        }
+
+        .compact-speed-title {
+            font-size: 9px;
+            letter-spacing: 2px;
+            color: #00f3ff;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .compact-speed-value {
+            font-size: 28px;
+            font-weight: 900;
+            color: #ffffff;
+            text-shadow: 0 0 14px #00f3ff;
+            font-variant-numeric: tabular-nums;
+            line-height: 1.1;
+        }
+
+        .compact-speed-unit {
+            font-size: 11px;
+            color: #00f3ff;
+            font-weight: 700;
+            margin-left: 4px;
+        }
+
+        .cyber-btn-small {
+            background: rgba(13, 13, 30, 0.8);
+            border: 1px solid #00f3ff;
+            color: #00f3ff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 10px;
+            letter-spacing: 1.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.2);
+        }
+
+        .cyber-btn-small:hover {
+            background: #00f3ff;
+            color: #050510;
+            box-shadow: 0 0 20px #00f3ff;
+        }
+
+        /* DOKUNMATİK TUŞLAR (MOBİL / FARE DESTEĞİ) */
+        .touch-controls {
+            position: absolute;
+            bottom: 25px;
+            width: calc(100% - 60px);
+            left: 30px;
+            display: flex;
+            justify-content: space-between;
+            pointer-events: none;
+        }
+
+        .touch-btn {
+            pointer-events: auto;
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            background: rgba(10, 10, 26, 0.65);
+            border: 2px solid #00f3ff;
+            box-shadow: 0 0 18px rgba(0, 243, 255, 0.35);
+            color: #00f3ff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+            cursor: pointer;
+            backdrop-filter: blur(6px);
+            transition: all 0.1s;
+        }
+
+        .touch-btn:active {
+            background: #00f3ff;
+            color: #000;
+            transform: scale(0.92);
+        }
+
+        /* MODAL EKRANLARI */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(3, 3, 10, 0.88);
+            backdrop-filter: blur(14px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 24px;
+            transition: opacity 0.4s ease;
+        }
+
+        .overlay-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .cyber-logo {
+            font-size: 52px;
+            font-weight: 900;
+            letter-spacing: 6px;
+            margin-bottom: 6px;
+            background: linear-gradient(135deg, #00f3ff 20%, #ffffff 50%, #ffe600 80%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 0 35px rgba(0, 243, 255, 0.6);
+        }
+
+        .cyber-subtitle {
+            font-size: 13px;
+            letter-spacing: 7px;
+            color: #ffe600;
+            text-transform: uppercase;
+            margin-bottom: 22px;
+            font-weight: 700;
+        }
+
+        .game-rules-card {
+            background: rgba(14, 14, 32, 0.85);
+            border: 1px solid rgba(0, 243, 255, 0.4);
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15);
+            border-radius: 16px;
+            padding: 22px 30px;
+            max-width: 540px;
+            margin-bottom: 28px;
+            text-align: left;
+            line-height: 1.5;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 17px;
+            color: #cbd5e1;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 9px;
+        }
+
+        .rule-bullet {
+            color: #00f3ff;
+            font-weight: 900;
+            font-size: 20px;
+        }
+
+        .rule-item strong {
+            color: #ffffff;
+        }
+
+        .start-btn {
+            background: linear-gradient(135deg, #ffe600, #ff007f);
+            border: none;
+            color: #050512;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 19px;
+            font-weight: 900;
+            letter-spacing: 3px;
+            padding: 16px 48px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 30px rgba(255, 230, 0, 0.6), 0 0 50px rgba(255, 0, 127, 0.4);
+            transition: all 0.25s ease;
+        }
+
+        .start-btn:hover {
+            transform: scale(1.06);
+            background: linear-gradient(135deg, #00f3ff, #ffe600);
+            box-shadow: 0 0 45px rgba(0, 243, 255, 0.8);
+        }
+
+        .gameover-title {
+            font-size: 58px;
+            font-weight: 900;
+            color: #ff0044;
+            text-shadow: 0 0 35px #ff0044;
+            letter-spacing: 5px;
+            margin-bottom: 10px;
+        }
+
+        .gameover-stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            width: 100%;
+            max-width: 460px;
+            margin-bottom: 26px;
+        }
+
+        .gameover-stat-box {
+            background: rgba(14, 14, 32, 0.85);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 12px;
+            padding: 14px;
+        }
+
+        .gameover-stat-box.highlight {
+            border-color: #00f3ff;
+            box-shadow: 0 0 18px rgba(0, 243, 255, 0.25);
+        }
+
+        .gameover-stat-box.highlight-yellow {
+            border-color: #ffe600;
+            box-shadow: 0 0 18px rgba(255, 230, 0, 0.25);
+        }
+
+        .damage-flash {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255, 0, 64, 0.45) 0%, rgba(255, 0, 0, 0.1) 100%);
+            pointer-events: none;
+            z-index: 25;
+            opacity: 0;
+            transition: opacity 0.1s ease-out;
+        }
+
+        .damage-flash.active {
+            opacity: 1;
+        }
+
+        .penalty-warning {
+            position: absolute;
+            top: 130px;
+            font-size: 24px;
+            font-weight: 900;
+            color: #ff0044;
+            letter-spacing: 3px;
+            background: rgba(20, 0, 10, 0.88);
+            padding: 8px 28px;
+            border: 2px solid #ff0044;
+            border-radius: 8px;
+            box-shadow: 0 0 25px #ff0044;
+            opacity: 0;
+            transform: scale(0.85);
+            transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+            z-index: 35;
+        }
+
+        .penalty-warning.show {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+
+        @media (max-width: 768px) {
+            .hud-layer {
+                padding: 12px 14px;
+            }
+            .stat-card {
+                min-width: 100px;
+                padding: 6px 10px;
+            }
+            .stat-value {
+                font-size: 16px;
+            }
+            .compact-speed-card {
+                min-width: 110px;
+                padding: 6px 12px;
+            }
+            .compact-speed-value {
+                font-size: 22px;
+            }
+            .cyber-logo {
+                font-size: 32px;
+            }
+            .touch-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div id="damageFlash" class="damage-flash"></div>
+    <div id="penaltyWarning" class="penalty-warning">⚠️ HIZ CEZASI! -%20 HIZ</div>
+
+    <!-- HUD LAYER (Tüm yol alanı ve haritanın alt kısmı tamamen açık) -->
+    <div class="hud-layer">
+        <!-- TOP HUD -->
+        <div class="top-hud">
+            <!-- SOL ÜST: CANLAR & YAKIT -->
+            <div class="left-hud-panel">
+                <div class="tires-container">
+                    <div class="hud-label">LASTİKLER (CAN)</div>
+                    <div class="tires-grid" id="tiresGrid">
+                        <div class="tire-icon" id="tire-0"><div class="tire-treads"><div class="tread"></div><div class="tread"></div></div></div>
+                        <div class="tire-icon" id="tire-1"><div class="tire-treads"><div class="tread"></div><div class="tread"></div></div></div>
+                        <div class="tire-icon" id="tire-2"><div class="tire-treads"><div class="tread"></div><div class="tread"></div></div></div>
+                        <div class="tire-icon" id="tire-3"><div class="tire-treads"><div class="tread"></div><div class="tread"></div></div></div>
+                    </div>
+                </div>
+
+                <div class="fuel-container">
+                    <div class="hud-label fuel-label">YAKIT DEPOSU (1 TUR)</div>
+                    <div class="fuel-bar-bg">
+                        <div class="fuel-bar-fill" id="fuelBarFill"></div>
+                    </div>
+                    <div class="fuel-stats-text">
+                        <span id="fuelPercent">100%</span>
+                        <span id="coinsStatus">🟡 0/3 ALTIN</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÜST ORTA: SÜRE & TOPLAM TUR & MAX HIZ -->
+            <div class="top-center-stats">
+                <div class="stat-card cyan-card">
+                    <div class="stat-title">HAYATTA KALMA</div>
+                    <div class="stat-value cyan" id="hudTime">00:00.00</div>
+                </div>
+                <div class="stat-card yellow-card">
+                    <div class="stat-title">TOPLAM TUR</div>
+                    <div class="stat-value" id="hudLaps" style="color:#ffe600; text-shadow:0 0 12px #ffe600;">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">MAX HIZ</div>
+                    <div class="stat-value magenta" id="hudMaxSpeed">0 <span class="stat-unit">KM/H</span></div>
+                </div>
+            </div>
+
+            <!-- SAĞ ÜST: KOMPAKT ANLIK HIZ, GOD MODE & SES -->
+            <div class="right-hud-panel">
+                <div class="compact-speed-card">
+                    <div class="compact-speed-title">ANLIK HIZ</div>
+                    <div class="compact-speed-value">
+                        <span id="hudSpeed">250</span><span class="compact-speed-unit">KM/H</span>
+                    </div>
+                </div>
+
+                <div class="godmode-badge inactive" id="godModeBadge" title="[G] tuşuna basarak açıp kapatın">
+                    <span>⚡ GOD MODE</span> <span id="godModeStatus">[KAPALI]</span>
+                </div>
+
+                <button class="cyber-btn-small" id="muteBtn">
+                    <span id="muteIcon">🔊</span> <span id="muteText">EDM SESİ</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- DOKUNMATİK TUŞLAR (MOBİL / FARE DESTEĞİ) -->
+        <div class="touch-controls">
+            <div class="touch-btn" id="btnLeft" title="İçe / Sola Kay">◀</div>
+            <div class="touch-btn" id="btnRight" title="Dışa / Sağa Kay">▶</div>
+        </div>
+    </div>
+
+    <!-- BAŞLANGIÇ EKRANI -->
+    <div class="overlay-screen" id="startScreen">
+        <h1 class="cyber-logo">CYBER ORBIT</h1>
+        <div class="cyber-subtitle">GENİŞLETİLMİŞ DAİRESEL PİST // KUŞ BAKIŞI ARENA</div>
+
+        <div class="game-rules-card">
+            <div class="rule-item">
+                <span class="rule-bullet">⚡</span>
+                <div><strong>Siber Halat:</strong> Merkeze siber halatla bağlısın ve dairesel yörüngede dönüyorsun!</div>
+            </div>
+            <div class="rule-item">
+                <span class="rule-bullet">🚀</span>
+                <div><strong>Sürekli Hızlanma:</strong> Hızın isteğinden bağımsız olarak sürekli artar!</div>
+            </div>
+            <div class="rule-item">
+                <span class="rule-bullet">🟡</span>
+                <div><strong>Sarı Altınlar & Yakıt:</strong> Depo <strong>1 tam tura</strong> yeter! Piste her tur rastgele <strong>5 altın</strong> konur. <strong>3 altın depoyu tamamen fuller</strong>. Alınmayan altınlar tur bitince yok olur!</div>
+            </div>
+            <div class="rule-item">
+                <span class="rule-bullet">⚠️</span>
+                <div><strong>Tek Tip Lazer Bariyer:</strong> Kırmızı siber bariyerlere çarptığında <strong>Hız Cezası</strong> alırsın ve 1 Lastik kaybedersin!</div>
+            </div>
+            <div class="rule-item">
+                <span class="rule-bullet">🛞</span>
+                <div><strong>4 Can (Lastik):</strong> 4 lastiğin patlarsa veya yakıtın biterse oyun sona erer!</div>
+            </div>
+            <div class="rule-item">
+                <span class="rule-bullet">👑</span>
+                <div><strong>[G] Tuşu (God Mode):</strong> Engellerden etkilenmezsin, yakıtın tükenmez ve tam dokunulmaz olursun!</div>
+            </div>
+        </div>
+
+        <button class="start-btn" id="startBtn">YARIŞA BAŞLA</button>
+    </div>
+
+    <!-- OYUN BİTTİ EKRANI -->
+    <div class="overlay-screen hidden" id="gameOverScreen">
+        <div class="gameover-title" id="goReasonTitle">SİSTEM ÇÖKTÜ</div>
+        <div class="cyber-subtitle" id="goReasonSubtitle">4 ÇARPMA ALINDI // LASTİKLER PATLADI</div>
+
+        <div class="gameover-stats-grid">
+            <div class="gameover-stat-box highlight">
+                <div class="stat-title">HAYATTA KALINAN SÜRE</div>
+                <div class="stat-value cyan" id="goTime">00:00.00</div>
+            </div>
+            <div class="gameover-stat-box highlight-yellow">
+                <div class="stat-title">EN YÜKSEK HIZ</div>
+                <div class="stat-value" id="goMaxSpeed" style="color:#ffe600;">0 KM/H</div>
+            </div>
+            <div class="gameover-stat-box">
+                <div class="stat-title">TAMAMLANAN TUR</div>
+                <div class="stat-value" id="goLaps" style="color:#ff007f;">0</div>
+            </div>
+            <div class="gameover-stat-box">
+                <div class="stat-title">PİST REKORU SÜRE</div>
+                <div class="stat-value" id="goBestTime" style="color:#ffffff;">00:00.00</div>
+            </div>
+        </div>
+
+        <button class="start-btn" id="restartBtn">TEKRAR DENE</button>
+    </div>
+</div>
+
+<script>
+/**
+ * CYBER ORBIT
+ * Circular Track, GTA 2 Style Top-Down Cyber Supercar,
+ * Procedural EDM Audio, Dynamic Yellow Fuel Coins & Laser Barriers
+ */
+
+// --- AUDIO ENGINE (Web Audio API Procedural EDM Synthesizer) ---
+class CyberSoundtrack {
+    constructor() {
+        this.ctx = null;
+        this.isMuted = false;
+        this.isPlaying = false;
+        this.tempo = 132;
+        this.step = 0;
+        this.nextNoteTime = 0;
+        this.timerID = null;
+
+        this.masterGain = null;
+        this.filterNode = null;
+
+        this.bassNotes = [87.31, 87.31, 103.83, 87.31, 116.54, 87.31, 130.81, 116.54];
+        this.leadNotes = [349.23, 415.30, 466.16, 523.25, 622.25, 698.46, 523.25, 415.30];
+
+        this.engineOsc = null;
+        this.engineGain = null;
+    }
+
+    init() {
+        if (this.ctx) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new AudioContext();
+
+        this.masterGain = this.ctx.createGain();
+        this.masterGain.gain.setValueAtTime(0.7, this.ctx.currentTime);
+
+        this.filterNode = this.ctx.createBiquadFilter();
+        this.filterNode.type = 'lowpass';
+        this.filterNode.frequency.setValueAtTime(2500, this.ctx.currentTime);
+        this.filterNode.Q.setValueAtTime(3, this.ctx.currentTime);
+
+        this.filterNode.connect(this.masterGain);
+        this.masterGain.connect(this.ctx.destination);
+
+        this.initEngineAudio();
+    }
+
+    initEngineAudio() {
+        this.engineOsc = this.ctx.createOscillator();
+        this.engineOsc.type = 'sawtooth';
+        this.engineOsc.frequency.setValueAtTime(45, this.ctx.currentTime);
+
+        const engineFilter = this.ctx.createBiquadFilter();
+        engineFilter.type = 'lowpass';
+        engineFilter.frequency.setValueAtTime(300, this.ctx.currentTime);
+
+        this.engineGain = this.ctx.createGain();
+        this.engineGain.gain.setValueAtTime(0.04, this.ctx.currentTime);
+
+        this.engineOsc.connect(engineFilter);
+        engineFilter.connect(this.engineGain);
+        this.engineGain.connect(this.masterGain);
+
+        this.engineOsc.start();
+    }
+
+    updateEnginePitch(speed) {
+        if (!this.ctx || !this.engineOsc) return;
+        const targetFreq = 42 + (speed * 0.45);
+        this.engineOsc.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.05);
+
+        const targetCutoff = Math.min(14000, 1800 + (speed * 18));
+        this.filterNode.frequency.setTargetAtTime(targetCutoff, this.ctx.currentTime, 0.1);
+    }
+
+    startMusic() {
+        if (this.isPlaying) return;
+        this.init();
+        if (this.ctx.state === 'suspended') {
+            this.ctx.resume();
+        }
+        this.isPlaying = true;
+        this.nextNoteTime = this.ctx.currentTime + 0.1;
+        this.schedule();
+    }
+
+    stopMusic() {
+        this.isPlaying = false;
+        if (this.timerID) clearTimeout(this.timerID);
+    }
+
+    toggleMute() {
+        this.isMuted = !this.isMuted;
+        if (this.masterGain) {
+            this.masterGain.gain.setTargetAtTime(this.isMuted ? 0 : 0.7, this.ctx.currentTime, 0.05);
+        }
+        return this.isMuted;
+    }
+
+    schedule() {
+        if (!this.isPlaying) return;
+        const secondsPerBeat = 60.0 / this.tempo;
+        const stepTime = secondsPerBeat / 4;
+
+        while (this.nextNoteTime < this.ctx.currentTime + 0.15) {
+            this.playStep(this.step, this.nextNoteTime);
+            this.nextNoteTime += stepTime;
+            this.step = (this.step + 1) % 32;
+        }
+
+        this.timerID = setTimeout(() => this.schedule(), 35);
+    }
+
+    playStep(step, time) {
+        if (!this.ctx) return;
+
+        // Kick Drum
+        if (step % 4 === 0) {
+            const kickOsc = this.ctx.createOscillator();
+            const kickGain = this.ctx.createGain();
+            kickOsc.frequency.setValueAtTime(140, time);
+            kickOsc.frequency.exponentialRampToValueAtTime(35, time + 0.12);
+            kickGain.gain.setValueAtTime(1.0, time);
+            kickGain.gain.exponentialRampToValueAtTime(0.001, time + 0.22);
+            kickOsc.connect(kickGain);
+            kickGain.connect(this.masterGain);
+            kickOsc.start(time);
+            kickOsc.stop(time + 0.22);
+        }
+
+        // Snare
+        if (step % 8 === 4) {
+            this.playSnare(time);
+        }
+
+        // Hi-Hat
+        if (step % 2 === 1) {
+            this.playHiHat(time, step % 4 === 2 ? 0.3 : 0.15);
+        }
+
+        // Offbeat Bass
+        if (step % 2 === 1) {
+            const bassIdx = Math.floor(step / 4) % this.bassNotes.length;
+            const freq = this.bassNotes[bassIdx];
+            this.playSynthBass(freq, time, 0.12);
+        }
+
+        // Arp Lead
+        const arpPatterns = [0, 2, 4, 7, 5, 3, 2, 0];
+        const noteIdx = arpPatterns[step % 8];
+        const leadFreq = this.leadNotes[noteIdx % this.leadNotes.length];
+        this.playLeadSynth(leadFreq, time, 0.09);
+    }
+
+    playSynthBass(freq, time, duration) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const filter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, time);
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(900, time);
+        filter.frequency.exponentialRampToValueAtTime(250, time + duration);
+
+        gain.gain.setValueAtTime(0.35, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.filterNode);
+
+        osc.start(time);
+        osc.stop(time + duration);
+    }
+
+    playLeadSynth(freq, time, duration) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq * 1.5, time);
+
+        gain.gain.setValueAtTime(0.12, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + duration);
+
+        osc.connect(gain);
+        gain.connect(this.filterNode);
+
+        osc.start(time);
+        osc.stop(time + duration);
+    }
+
+    playHiHat(time, vol) {
+        const bufferSize = this.ctx.sampleRate * 0.04;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(7000, time);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(vol, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        noise.start(time);
+    }
+
+    playSnare(time) {
+        const bufferSize = this.ctx.sampleRate * 0.15;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(1200, time);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.4, time);
+        gain.gain.exponentialRampToValueAtTime(0.001, time + 0.15);
+
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.masterGain);
+
+        noise.start(time);
+    }
+
+    // SFX: Çarpma / Hasar
+    playCrashSFX() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(160, t);
+        osc.frequency.exponentialRampToValueAtTime(30, t + 0.35);
+
+        oscGain.gain.setValueAtTime(0.8, t);
+        oscGain.gain.exponentialRampToValueAtTime(0.001, t + 0.4);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.4);
+    }
+
+    // SFX: Sarı Coin Alma Sesi
+    playCoinSFX() {
+        if (!this.ctx) return;
+        const t = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(987.77, t); // B5
+        osc.frequency.setValueAtTime(1318.51, t + 0.08); // E6
+
+        gain.gain.setValueAtTime(0.3, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+        osc.start(t);
+        osc.stop(t + 0.25);
+    }
+}
+
+// --- GAME LOGIC & RENDERING ---
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const sound = new CyberSoundtrack();
+
+// PİST PARAMETRELERİ (Genişletilmiş ve Ferah Pist)
+const TRACK = {
+    innerRadius: 140,
+    outerRadius: 430,
+    centerHubRadius: 60,
+    stadiumRadius: 490,
+    numLanes: 3
+};
+
+let viewWidth = window.innerWidth;
+let viewHeight = window.innerHeight;
+let centerX = viewWidth / 2;
+let centerY = viewHeight / 2;
+
+// World Data
+let obstacles = [];
+let coins = [];
+let particles = [];
+let tireMarks = [];
+let stadiumFans = [];
+let stadiumSpotlights = [];
+let neonBillboards = [];
+
+// Stadyum Seyircileri
+function initStadium() {
+    stadiumFans = [];
+    const fanCount = 180;
+    for (let i = 0; i < fanCount; i++) {
+        const theta = (i / fanCount) * Math.PI * 2;
+        const ring = TRACK.stadiumRadius + 15 + Math.random() * 50;
+        const colors = ['#00f3ff', '#ff007f', '#ffe600', '#9b00e8', '#ffffff'];
+        stadiumFans.push({
+            x: Math.cos(theta) * ring,
+            y: Math.sin(theta) * ring,
+            baseColor: colors[Math.floor(Math.random() * colors.length)],
+            glowTimer: Math.random() * 10,
+            size: 3 + Math.random() * 3
+        });
+    }
+
+    stadiumSpotlights = [
+        { angle: 0, speed: 0.6, sweepRange: 0.4, color: 'rgba(0, 243, 255, 0.15)' },
+        { angle: Math.PI * 0.5, speed: -0.5, sweepRange: 0.5, color: 'rgba(255, 0, 127, 0.15)' },
+        { angle: Math.PI, speed: 0.7, sweepRange: 0.4, color: 'rgba(255, 230, 0, 0.15)' },
+        { angle: Math.PI * 1.5, speed: -0.6, sweepRange: 0.5, color: 'rgba(155, 0, 232, 0.15)' }
+    ];
+
+    neonBillboards = [
+        { angle: 0.3, text: 'CYBER ARENA', color: '#00f3ff' },
+        { angle: 1.8, text: 'FUEL OR DIE', color: '#ffe600' },
+        { angle: 3.4, text: 'SPEED ADDICT', color: '#ff007f' },
+        { angle: 4.9, text: 'OVERDRIVE 2099', color: '#00f3ff' }
+    ];
+}
+
+// PİSTİ GENİŞLETME VE EKRANA DUYARLI ÖLÇEKLEME
+function updateTrackDimensions() {
+    const minDim = Math.min(viewWidth, viewHeight);
+    const baseStadium = Math.max(280, Math.min(540, minDim * 0.46));
+    TRACK.stadiumRadius = baseStadium;
+    TRACK.outerRadius = baseStadium * 0.90; // Çok daha geniş dış sınır
+    TRACK.innerRadius = baseStadium * 0.30; // Çok daha geniş iç koridor (Pist alanı ferahlatıldı)
+    TRACK.centerHubRadius = baseStadium * 0.14;
+}
+
+function resizeCanvas() {
+    const dpr = window.devicePixelRatio || 1;
+    viewWidth = window.innerWidth;
+    viewHeight = window.innerHeight;
+    canvas.width = viewWidth * dpr;
+    canvas.height = viewHeight * dpr;
+    ctx.scale(dpr, dpr);
+    centerX = viewWidth / 2;
+    centerY = viewHeight / 2;
+    updateTrackDimensions();
+    initStadium();
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// Oyun Durumu
+const GAME_STATE = {
+    MENU: 0,
+    PLAYING: 1,
+    GAMEOVER: 2
+};
+let currentState = GAME_STATE.MENU;
+
+// GTA 2 Tarzı Gerçekçi Cyber Supercar
+const player = {
+    angle: -Math.PI / 2,
+    radius: 300,
+    angularVelocity: 0,
+    radialVelocity: 0,
+    speedKmh: 250,
+    baseSpeedKmh: 250,
+    maxRecordedSpeed: 250,
+    accelerationRate: 6.8, // 1.5x daha hızlı ivmelenme
+    lives: 4,
+    fuel: 1.0,           // 1.0 = Tam Depo (1 tur dayanır)
+    coinsCollectedThisLap: 0,
+    invulnerableTimer: 0,
+    width: 24,           // Gerçekçi spor araba genişliği
+    length: 48,          // Gerçekçi uzunluk
+    color: '#00f3ff',
+    driftAngle: 0,
+    lateralInput: 0
+};
+
+// Sayaçlar ve God Mode
+let gameStartTime = 0;
+let survivalTimeMs = 0;
+let totalLaps = 0;
+let currentLapStartAngle = -Math.PI / 2;
+let lastAngle = player.angle;
+let cameraShake = 0;
+let bestSurvivalTimeMs = localStorage.getItem('cyber_orbit_best_time') || 0;
+let isGodMode = false;
+
+// Klavye Girişleri (Sol, Sağ ve G tuşu ile God Mode)
+const keys = { left: false, right: false };
+window.addEventListener('keydown', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+    if (e.code === 'KeyG') {
+        toggleGodMode();
+    }
+});
+window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+});
+
+// Mobil / Dokunmatik Butonlar
+const btnLeft = document.getElementById('btnLeft');
+const btnRight = document.getElementById('btnRight');
+const addTouchEvents = (btn, isLeft) => {
+    const startHandler = (e) => { e.preventDefault(); if (isLeft) keys.left = true; else keys.right = true; };
+    const endHandler = (e) => { e.preventDefault(); if (isLeft) keys.left = false; else keys.right = false; };
+    btn.addEventListener('mousedown', startHandler);
+    btn.addEventListener('touchstart', startHandler);
+    btn.addEventListener('mouseup', endHandler);
+    btn.addEventListener('touchend', endHandler);
+    btn.addEventListener('mouseleave', endHandler);
+};
+addTouchEvents(btnLeft, true);
+addTouchEvents(btnRight, false);
+
+// UI Elemanları
+const hudSpeed = document.getElementById('hudSpeed');
+const hudMaxSpeed = document.getElementById('hudMaxSpeed');
+const hudTime = document.getElementById('hudTime');
+const hudLaps = document.getElementById('hudLaps');
+const fuelBarFill = document.getElementById('fuelBarFill');
+const fuelPercent = document.getElementById('fuelPercent');
+const coinsStatus = document.getElementById('coinsStatus');
+const damageFlash = document.getElementById('damageFlash');
+const penaltyWarning = document.getElementById('penaltyWarning');
+const godModeBadge = document.getElementById('godModeBadge');
+const godModeStatus = document.getElementById('godModeStatus');
+const startScreen = document.getElementById('startScreen');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const startBtn = document.getElementById('startBtn');
+
+function toggleGodMode() {
+    isGodMode = !isGodMode;
+    if (isGodMode) {
+        godModeBadge.classList.remove('inactive');
+        godModeStatus.textContent = '[AKTİF]';
+    } else {
+        godModeBadge.classList.add('inactive');
+        godModeStatus.textContent = '[KAPALI]';
+    }
+}
+if (godModeBadge) {
+    godModeBadge.addEventListener('click', toggleGodMode);
+}
+const restartBtn = document.getElementById('restartBtn');
+const goTime = document.getElementById('goTime');
+const goMaxSpeed = document.getElementById('goMaxSpeed');
+const goLaps = document.getElementById('goLaps');
+const goBestTime = document.getElementById('goBestTime');
+const goReasonTitle = document.getElementById('goReasonTitle');
+const goReasonSubtitle = document.getElementById('goReasonSubtitle');
+
+// Mute Button
+const muteBtn = document.getElementById('muteBtn');
+const muteIcon = document.getElementById('muteIcon');
+const muteText = document.getElementById('muteText');
+muteBtn.addEventListener('click', () => {
+    const isMuted = sound.toggleMute();
+    muteIcon.textContent = isMuted ? '🔇' : '🔊';
+    muteText.textContent = isMuted ? 'SES KAPALI' : 'EDM SESİ';
+});
+
+function formatTime(ms) {
+    const totalSeconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    const centiseconds = Math.floor((ms % 1000) / 10);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(centiseconds).padStart(2, '0')}`;
+}
+
+function updateTireHUD() {
+    for (let i = 0; i < 4; i++) {
+        const tireEl = document.getElementById(`tire-${i}`);
+        if (i < player.lives) {
+            tireEl.classList.remove('popped');
+        } else {
+            tireEl.classList.add('popped');
+        }
+    }
+}
+
+let penaltyTimeout = null;
+function triggerPenaltyWarning() {
+    penaltyWarning.classList.add('show');
+    damageFlash.classList.add('active');
+    if (penaltyTimeout) clearTimeout(penaltyTimeout);
+    penaltyTimeout = setTimeout(() => {
+        penaltyWarning.classList.remove('show');
+        damageFlash.classList.remove('active');
+    }, 1200);
+}
+
+// HER TUR İÇİN 5 ADET SARI ALTIN COIN YERLEŞTİRME
+function spawnLapCoins(baseAngle) {
+    coins = []; // Eski turdan alınmayan tüm coinler yok olur!
+    player.coinsCollectedThisLap = 0;
+
+    const laneWidth = (TRACK.outerRadius - TRACK.innerRadius) / TRACK.numLanes;
+    // 1 tur (2 PI) boyunca 5 adet sarı coin dağıt
+    const segment = (Math.PI * 2) / 5;
+    for (let i = 0; i < 5; i++) {
+        const laneIndex = Math.floor(Math.random() * TRACK.numLanes);
+        const radius = TRACK.innerRadius + (laneIndex + 0.5) * laneWidth;
+        const angle = baseAngle + (i * segment) + (Math.random() * 0.4 + 0.2);
+
+        coins.push({
+            angle: angle,
+            radius: radius,
+            collected: false,
+            rotation: Math.random() * Math.PI,
+            pulseTimer: Math.random() * 5
+        });
+    }
+    coinsStatus.textContent = `🟡 0/3 ALTIN`;
+}
+
+// ENGEL EKLEME (Tek tip ve sayısı azaltılmış Lazer Bariyeri)
+function spawnObstacle(targetAngle) {
+    const laneWidth = (TRACK.outerRadius - TRACK.innerRadius) / TRACK.numLanes;
+    const laneIndex = Math.floor(Math.random() * TRACK.numLanes);
+    const radius = TRACK.innerRadius + (laneIndex + 0.5) * laneWidth;
+
+    obstacles.push({
+        angle: targetAngle,
+        radius: radius,
+        laneIndex: laneIndex,
+        pulseTimer: Math.random() * 5,
+        width: 38,
+        alive: true
+    });
+}
+
+// Oyunu Başlat
+function startGame() {
+    startScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+
+    player.angle = -Math.PI / 2;
+    player.radius = (TRACK.innerRadius + TRACK.outerRadius) / 2;
+    player.speedKmh = 250;
+    player.baseSpeedKmh = 250;
+    player.maxRecordedSpeed = 250;
+    player.lives = 4;
+    player.fuel = 1.0; // Tam Depo
+    player.radialVelocity = 0;
+    player.invulnerableTimer = 0;
+    player.driftAngle = 0;
+
+    obstacles = [];
+    particles = [];
+    tireMarks = [];
+    totalLaps = 0;
+    currentLapStartAngle = player.angle;
+    lastAngle = player.angle;
+    gameStartTime = performance.now();
+    survivalTimeMs = 0;
+
+    updateTireHUD();
+    spawnLapCoins(player.angle);
+
+    // Engelleri az tutuyoruz: İlk turda sadece 2 seyrek engel
+    spawnObstacle(player.angle + Math.PI * 0.7);
+    spawnObstacle(player.angle + Math.PI * 1.5);
+
+    currentState = GAME_STATE.PLAYING;
+    sound.startMusic();
+}
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+
+function gameOver(reason = 'crash') {
+    currentState = GAME_STATE.GAMEOVER;
+    sound.stopMusic();
+
+    if (reason === 'fuel') {
+        goReasonTitle.textContent = 'YAKIT TÜKENDİ';
+        goReasonSubtitle.textContent = 'MOTOR DURDU // YETERLİ ALTIN TOPLANAMADI';
+    } else {
+        goReasonTitle.textContent = 'SİSTEM ÇÖKTÜ';
+        goReasonSubtitle.textContent = '4 ÇARPMA ALINDI // TÜM LASTİKLER PATLADI';
+    }
+
+    if (survivalTimeMs > bestSurvivalTimeMs) {
+        bestSurvivalTimeMs = survivalTimeMs;
+        localStorage.setItem('cyber_orbit_best_time', bestSurvivalTimeMs);
+    }
+
+    goTime.textContent = formatTime(survivalTimeMs);
+    goMaxSpeed.textContent = `${Math.round(player.maxRecordedSpeed)} KM/H`;
+    goLaps.textContent = totalLaps;
+    goBestTime.textContent = formatTime(bestSurvivalTimeMs);
+
+    gameOverScreen.classList.remove('hidden');
+}
+
+function createParticles(x, y, count, color, speedMul = 1) {
+    for (let i = 0; i < count; i++) {
+        const pAngle = Math.random() * Math.PI * 2;
+        const pSpeed = (Math.random() * 4 + 1) * speedMul;
+        particles.push({
+            x: x, y: y,
+            vx: Math.cos(pAngle) * pSpeed,
+            vy: Math.sin(pAngle) * pSpeed,
+            size: Math.random() * 3.5 + 1.5,
+            color: color,
+            alpha: 1.0,
+            decay: Math.random() * 0.03 + 0.02
+        });
+    }
+}
+
+// Ana Güncelleme Döngüsü
+let lastTime = performance.now();
+
+function update(dt) {
+    if (currentState !== GAME_STATE.PLAYING) return;
+
+    survivalTimeMs = performance.now() - gameStartTime;
+
+    // 1. KULLANICIDAN BAĞIMSIZ SÜREKLİ HIZLANMA
+    player.speedKmh += player.accelerationRate * dt;
+    if (player.speedKmh > player.maxRecordedSpeed) {
+        player.maxRecordedSpeed = player.speedKmh;
+    }
+
+    // Açısal hız
+    const speedRatio = player.speedKmh / 3.6;
+    player.angularVelocity = (speedRatio * 0.009) / (player.radius / 300);
+    const prevAngle = player.angle;
+    player.angle += player.angularVelocity * dt;
+    const deltaAngle = player.angle - prevAngle;
+
+    // 2. YAKIT TÜKETİMİ: 1 TAM TUR = 1 TAM DEPO
+    // God mode aktifken yakıt tükenmez!
+    if (!isGodMode) {
+        const fuelConsumption = deltaAngle / (Math.PI * 2);
+        player.fuel = Math.max(0, player.fuel - fuelConsumption);
+        if (player.fuel <= 0) {
+            gameOver('fuel');
+            return;
+        }
+    } else {
+        player.fuel = 1.0; // God mode'da depo sürekli tam
+    }
+
+    // 3. TAM TUR TAMAMLANDIĞINDA: ESKİ COINLER SİLİNİR, 5 YENİ COIN KONUR
+    if (player.angle - currentLapStartAngle >= Math.PI * 2) {
+        totalLaps++;
+        currentLapStartAngle += Math.PI * 2;
+        spawnLapCoins(player.angle);
+    }
+
+    // 4. KULLANICI KONTROLÜ: SAĞ - SOL ŞERİT DEĞİŞTİRME
+    player.lateralInput = 0;
+    if (keys.left) player.lateralInput -= 1;
+    if (keys.right) player.lateralInput += 1;
+
+    const radialMoveSpeed = 240;
+    const targetRadialVel = player.lateralInput * radialMoveSpeed;
+    player.radialVelocity += (targetRadialVel - player.radialVelocity) * (14 * dt);
+    player.radius += player.radialVelocity * dt;
+
+    // Genişletilmiş pist sınırları
+    const minSafeRadius = TRACK.innerRadius + 22;
+    const maxSafeRadius = TRACK.outerRadius - 22;
+    if (player.radius < minSafeRadius) {
+        player.radius = minSafeRadius;
+        player.radialVelocity = 0;
+    } else if (player.radius > maxSafeRadius) {
+        player.radius = maxSafeRadius;
+        player.radialVelocity = 0;
+    }
+
+    // Drift & Teğet Açısı
+    const tangentAngle = player.angle + Math.PI / 2;
+    const targetDrift = (player.radialVelocity / radialMoveSpeed) * 0.25;
+    player.driftAngle += (targetDrift - player.driftAngle) * (12 * dt);
+
+    // Lastik izleri
+    if (Math.abs(player.radialVelocity) > 40) {
+        const carX = centerX + Math.cos(player.angle) * player.radius;
+        const carY = centerY + Math.sin(player.angle) * player.radius;
+        tireMarks.push({
+            x: carX, y: carY,
+            alpha: 0.45,
+            angle: player.angle + Math.PI + player.driftAngle
+        });
+    }
+
+    // 5. ENGEL YÖNETİMİ (AZALTILMIŞ VE SEYREK)
+    let maxAheadAngle = player.angle;
+    obstacles.forEach(o => {
+        if (o.angle > maxAheadAngle) maxAheadAngle = o.angle;
+    });
+
+    // Piste aynı anda sadece 2 engel gelecek şekilde aralığı geniş tutuyoruz
+    if (maxAheadAngle - player.angle < Math.PI * 1.8) {
+        const spawnDist = 0.9 + Math.random() * 0.5; // Daha seyrek
+        spawnObstacle(maxAheadAngle + spawnDist);
+    }
+    obstacles = obstacles.filter(o => (player.angle - o.angle) < Math.PI * 0.6);
+
+    // 6. ÇARPIŞMALAR & SARI COIN TOPLAMA
+    if (player.invulnerableTimer > 0) {
+        player.invulnerableTimer -= dt;
+    }
+
+    const playerWorldX = centerX + Math.cos(player.angle) * player.radius;
+    const playerWorldY = centerY + Math.sin(player.angle) * player.radius;
+
+    // Sarı Coinleri Toplama
+    coins.forEach(c => {
+        if (c.collected) return;
+        const cx = centerX + Math.cos(c.angle) * c.radius;
+        const cy = centerY + Math.sin(c.angle) * c.radius;
+        const dist = Math.hypot(playerWorldX - cx, playerWorldY - cy);
+
+        if (dist < 34) {
+            c.collected = true;
+            player.coinsCollectedThisLap++;
+
+            // 3 ALTIN BİR DEPOYU FULLESİN: Her altın +%33.33 yakıt verir
+            player.fuel = Math.min(1.0, player.fuel + (1 / 3));
+
+            createParticles(cx, cy, 16, '#ffe600', 2.5);
+            sound.playCoinSFX();
+            coinsStatus.textContent = `🟡 ${player.coinsCollectedThisLap}/3 ALTIN`;
+        }
+    });
+
+    // Kırmızı Lazer Bariyer Çarpışması
+    obstacles.forEach(obs => {
+        if (!obs.alive) return;
+        const ox = centerX + Math.cos(obs.angle) * obs.radius;
+        const oy = centerY + Math.sin(obs.angle) * obs.radius;
+        const dist = Math.hypot(playerWorldX - ox, playerWorldY - oy);
+
+        if (dist < 32) {
+            obs.alive = false;
+            createParticles(ox, oy, 24, '#ff0044', 3);
+            sound.playCrashSFX();
+            cameraShake = 16;
+
+            // GOD MODE AKTİFSE ENGEL VE CEZADAN ETKİLENMEZ!
+            if (!isGodMode) {
+                if (player.invulnerableTimer <= 0) {
+                    player.lives--;
+                    player.invulnerableTimer = 1.6;
+                    updateTireHUD();
+
+                    // HIZ CEZASI (%20 YAVAŞLAMA - %40'tan %20'ye düşürüldü)
+                    player.speedKmh = Math.max(player.baseSpeedKmh, player.speedKmh * 0.80);
+                    triggerPenaltyWarning();
+
+                    // 4 ÇARPMA SONUCU OYUN BİTER
+                    if (player.lives <= 0) {
+                        gameOver('crash');
+                        return;
+                    }
+                }
+            }
+        }
+    });
+
+    // 7. SES VE HUD GÜNCELLEMELERİ
+    sound.updateEnginePitch(player.speedKmh);
+
+    tireMarks.forEach(t => t.alpha -= 0.008);
+    tireMarks = tireMarks.filter(t => t.alpha > 0.01);
+
+    particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.alpha -= p.decay;
+    });
+    particles = particles.filter(p => p.alpha > 0);
+
+    if (cameraShake > 0) cameraShake *= 0.9;
+
+    // HUD Metinleri
+    hudSpeed.textContent = Math.round(player.speedKmh);
+    hudMaxSpeed.innerHTML = `${Math.round(player.maxRecordedSpeed)} <span class="stat-unit">KM/H</span>`;
+    hudTime.textContent = formatTime(survivalTimeMs);
+    if (hudLaps) hudLaps.textContent = totalLaps;
+
+    // Yakıt Barı
+    const fuelPct = Math.round(player.fuel * 100);
+    fuelPercent.textContent = `${fuelPct}%`;
+    fuelBarFill.style.width = `${fuelPct}%`;
+}
+
+// --- RENDER DÖNGÜSÜ ---
+function render() {
+    ctx.clearRect(0, 0, viewWidth, viewHeight);
+
+    ctx.save();
+    if (cameraShake > 0.5) {
+        ctx.translate((Math.random() - 0.5) * cameraShake, (Math.random() - 0.5) * cameraShake);
+    }
+
+    renderBackgroundGrid();
+    renderStadiumAndFans();
+    renderCircularTrack();
+    renderFinishLine();
+    renderTireMarks();
+    renderCyberCore();
+    renderObstacles();
+    renderCoins();
+    renderCyberTether();
+    renderSupercar();
+    renderParticles();
+    renderSpotlights();
+
+    ctx.restore();
+}
+
+function renderBackgroundGrid() {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(0, 243, 255, 0.04)';
+    ctx.lineWidth = 1;
+    const gridSize = 45;
+    for (let x = 0; x < viewWidth; x += gridSize) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, viewHeight); ctx.stroke();
+    }
+    for (let y = 0; y < viewHeight; y += gridSize) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(viewWidth, y); ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function renderStadiumAndFans() {
+    ctx.save();
+    const time = performance.now() * 0.002;
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, TRACK.stadiumRadius + 70, 0, Math.PI * 2);
+    ctx.fillStyle = '#060614';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, TRACK.stadiumRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(155, 0, 232, 0.35)';
+    ctx.lineWidth = 14;
+    ctx.stroke();
+
+    stadiumFans.forEach(fan => {
+        const glow = Math.sin(time * 3 + fan.glowTimer) * 0.5 + 0.5;
+        ctx.beginPath();
+        ctx.arc(centerX + fan.x, centerY + fan.y, fan.size, 0, Math.PI * 2);
+        ctx.fillStyle = fan.baseColor;
+        ctx.shadowColor = fan.baseColor;
+        ctx.shadowBlur = 6 * glow;
+        ctx.fill();
+    });
+
+    neonBillboards.forEach(b => {
+        const bx = centerX + Math.cos(b.angle) * (TRACK.stadiumRadius + 30);
+        const by = centerY + Math.sin(b.angle) * (TRACK.stadiumRadius + 30);
+        ctx.save();
+        ctx.translate(bx, by);
+        ctx.rotate(b.angle + Math.PI / 2);
+        ctx.font = 'bold 11px Orbitron';
+        ctx.fillStyle = b.color;
+        ctx.shadowColor = b.color;
+        ctx.shadowBlur = 10;
+        ctx.textAlign = 'center';
+        ctx.fillText(b.text, 0, 0);
+        ctx.restore();
+    });
+
+    ctx.restore();
+}
+
+// GENİŞLETİLMİŞ VE FERAH PİST
+function renderCircularTrack() {
+    ctx.save();
+
+    // Genişletilmiş Asfalt Yolu
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, TRACK.outerRadius, 0, Math.PI * 2);
+    ctx.arc(centerX, centerY, TRACK.innerRadius, 0, Math.PI * 2, true);
+    ctx.fillStyle = '#0a0b16';
+    ctx.fill();
+
+    // Dış Neon Bariyer
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, TRACK.outerRadius, 0, Math.PI * 2);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#00f3ff';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+
+    // İç Neon Bariyer
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, TRACK.innerRadius, 0, Math.PI * 2);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#ff007f';
+    ctx.shadowColor = '#ff007f';
+    ctx.shadowBlur = 14;
+    ctx.stroke();
+
+    // Kesikli Şerit Çizgileri
+    const laneWidth = (TRACK.outerRadius - TRACK.innerRadius) / TRACK.numLanes;
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([16, 20]);
+    for (let l = 1; l < TRACK.numLanes; l++) {
+        const laneRadius = TRACK.innerRadius + l * laneWidth;
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, laneRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(0, 243, 255, 0.22)';
+        ctx.stroke();
+    }
+    ctx.setLineDash([]);
+
+    // Akan Yön Okları
+    const time = performance.now() * 0.003;
+    const arrowCount = 10;
+    for (let i = 0; i < arrowCount; i++) {
+        const arrAngle = (i / arrowCount) * Math.PI * 2 + (time * 0.4);
+        const arrRadius = (TRACK.innerRadius + TRACK.outerRadius) / 2;
+        const ax = centerX + Math.cos(arrAngle) * arrRadius;
+        const ay = centerY + Math.sin(arrAngle) * arrRadius;
+
+        ctx.save();
+        ctx.translate(ax, ay);
+        ctx.rotate(arrAngle + Math.PI / 2);
+        ctx.fillStyle = 'rgba(255, 230, 0, 0.1)';
+        ctx.beginPath();
+        ctx.moveTo(0, -9);
+        ctx.lineTo(7, 9);
+        ctx.lineTo(-7, 9);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+// KÜÇÜK VE GÖZ YORMAYAN TUR BİTİŞ ÇİZGİSİ (FINISH LINE)
+function renderFinishLine() {
+    ctx.save();
+    const finishAngle = -Math.PI / 2; // Başlangıç / Bitiş konumu (Saat 12)
+
+    ctx.translate(centerX, centerY);
+    ctx.rotate(finishAngle);
+
+    const startR = TRACK.innerRadius + 4;
+    const endR = TRACK.outerRadius - 4;
+    const trackSpan = endR - startR;
+
+    const rows = 2; // 2 ince sıra damalı desen
+    const checkSize = 7;
+    const cols = Math.floor(trackSpan / checkSize);
+
+    // Arka plan neon parıltısı
+    ctx.fillStyle = 'rgba(0, 243, 255, 0.08)';
+    ctx.fillRect(startR, -checkSize, trackSpan, checkSize * 2);
+
+    // Damalı Çizgi
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            const isWhite = (r + c) % 2 === 0;
+            ctx.fillStyle = isWhite ? '#ffffff' : 'rgba(12, 16, 28, 0.95)';
+            ctx.fillRect(startR + c * checkSize, -checkSize + (r * checkSize), checkSize, checkSize);
+        }
+    }
+
+    // Minik, göz yormayan 'FINISH' yazısı
+    ctx.font = 'bold 8px Orbitron';
+    ctx.fillStyle = '#00f3ff';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 5;
+    ctx.textAlign = 'center';
+    ctx.fillText('FINISH', startR + trackSpan / 2, -checkSize - 4);
+
+    ctx.restore();
+}
+
+function renderCyberCore() {
+    ctx.save();
+    const time = performance.now() * 0.003;
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, TRACK.centerHubRadius, 0, Math.PI * 2);
+    ctx.fillStyle = '#080818';
+    ctx.fill();
+    ctx.lineWidth = 3.5;
+    ctx.strokeStyle = '#00f3ff';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 16;
+    ctx.stroke();
+
+    const blades = 6;
+    for (let i = 0; i < blades; i++) {
+        const bAngle = time + (i * (Math.PI * 2 / blades));
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(bAngle);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(TRACK.centerHubRadius - 8, -5);
+        ctx.lineTo(TRACK.centerHubRadius - 8, 5);
+        ctx.closePath();
+        ctx.fillStyle = (i % 2 === 0) ? '#ff007f' : '#00f3ff';
+        ctx.fill();
+        ctx.restore();
+    }
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 18, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 20;
+    ctx.fill();
+
+    ctx.restore();
+}
+
+// SİBER İP
+function renderCyberTether() {
+    ctx.save();
+    const carX = centerX + Math.cos(player.angle) * player.radius;
+    const carY = centerY + Math.sin(player.angle) * player.radius;
+
+    const time = performance.now() * 0.006;
+    const midRadius = player.radius * 0.5;
+    const midAngle = player.angle - 0.07 * (player.speedKmh / 200);
+    const ctrlX = centerX + Math.cos(midAngle) * midRadius;
+    const ctrlY = centerY + Math.sin(midAngle) * midRadius;
+
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, carX, carY);
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'rgba(0, 243, 255, 0.35)';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 15;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(centerX, centerY);
+    ctx.quadraticCurveTo(ctrlX, ctrlY, carX, carY);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.shadowColor = '#ffe600';
+    ctx.shadowBlur = 8;
+    ctx.stroke();
+
+    const nodeCount = 4;
+    for (let i = 1; i <= nodeCount; i++) {
+        const t = ((time + (i / nodeCount)) % 1);
+        const nx = (1 - t) * (1 - t) * centerX + 2 * (1 - t) * t * ctrlX + t * t * carX;
+        const ny = (1 - t) * (1 - t) * centerY + 2 * (1 - t) * t * ctrlY + t * t * carY;
+        ctx.beginPath();
+        ctx.arc(nx, ny, 3, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffe600';
+        ctx.shadowColor = '#ffe600';
+        ctx.shadowBlur = 8;
+        ctx.fill();
+    }
+    ctx.restore();
+}
+
+// YENİ ARABA TİPLEMESİ: ŞIK, GERÇEKÇİ CYBER SUPERCAR (GTA 2 KUŞ BAKIŞI)
+function renderSupercar() {
+    ctx.save();
+    const carX = centerX + Math.cos(player.angle) * player.radius;
+    const carY = centerY + Math.sin(player.angle) * player.radius;
+    // Arabanın burnunu tam olarak gittiği yöne (pist yönüne) çeviriyoruz
+    const headingAngle = player.angle + Math.PI + player.driftAngle;
+
+    ctx.translate(carX, carY);
+    ctx.rotate(headingAngle);
+
+    if (player.invulnerableTimer > 0 && Math.floor(player.invulnerableTimer * 12) % 2 === 0) {
+        ctx.globalAlpha = 0.35;
+    }
+
+    // GOD MODE ALTIN KALKAN AURASI
+    if (isGodMode) {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, 34, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ffe600';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#ffe600';
+        ctx.shadowBlur = 22;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(0, 0, 40, 0, Math.PI * 2);
+        ctx.strokeStyle = '#ff007f';
+        ctx.lineWidth = 1.5;
+        ctx.shadowColor = '#ff007f';
+        ctx.shadowBlur = 15;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    // 1. NEON ALT AYDINLATMA (Underglow Neon Cyan)
+    ctx.beginPath();
+    ctx.ellipse(0, 0, player.width * 0.9, player.length * 0.65, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 243, 255, 0.4)';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 20;
+    ctx.fill();
+
+    // 2. ARABA GÖLGESİ
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+    ctx.fillRect(-player.width / 2 - 3, -player.length / 2 + 3, player.width + 6, player.length);
+
+    // 3. GERÇEKÇİ YARIŞ LASTİKLERİ (4 ADET BELİRGİN LASTİK)
+    ctx.fillStyle = '#0d0f18';
+    ctx.strokeStyle = '#00f3ff';
+    ctx.lineWidth = 1;
+
+    // Ön Tekerlekler (Drift açısına göre döner)
+    const steerAngle = player.driftAngle * 1.5;
+    // Ön Sol
+    ctx.save();
+    ctx.translate(-player.width / 2 - 2, -player.length / 2 + 10);
+    ctx.rotate(steerAngle);
+    ctx.fillRect(-3, -7, 6, 14);
+    ctx.strokeRect(-3, -7, 6, 14);
+    ctx.restore();
+    // Ön Sağ
+    ctx.save();
+    ctx.translate(player.width / 2 + 2, -player.length / 2 + 10);
+    ctx.rotate(steerAngle);
+    ctx.fillRect(-3, -7, 6, 14);
+    ctx.strokeRect(-3, -7, 6, 14);
+    ctx.restore();
+
+    // Arka Tekerlekler (Sabit Geniş Yarış Lastikleri)
+    ctx.fillRect(-player.width / 2 - 5, player.length / 2 - 17, 7, 15);
+    ctx.strokeRect(-player.width / 2 - 5, player.length / 2 - 17, 7, 15);
+    ctx.fillRect(player.width / 2 - 2, player.length / 2 - 17, 7, 15);
+    ctx.strokeRect(player.width / 2 - 2, player.length / 2 - 17, 7, 15);
+
+    // 4. ŞIK SPOR ARABA GÖVDESİ (AERODİNAMİK ÇİZGİLERLE)
+    ctx.beginPath();
+    // Ön burun eğrisi
+    ctx.moveTo(-player.width * 0.38, -player.length * 0.5);
+    ctx.lineTo(player.width * 0.38, -player.length * 0.5);
+    // Ön çamurluk sağ
+    ctx.quadraticCurveTo(player.width * 0.56, -player.length * 0.35, player.width * 0.5, -player.length * 0.15);
+    // Kapı beli (hafif daralma)
+    ctx.quadraticCurveTo(player.width * 0.44, 0, player.width * 0.54, player.length * 0.25);
+    // Arka çamurluk sağ
+    ctx.quadraticCurveTo(player.width * 0.56, player.length * 0.45, player.width * 0.42, player.length * 0.5);
+    // Arka difüzör
+    ctx.lineTo(-player.width * 0.42, player.length * 0.5);
+    // Arka çamurluk sol
+    ctx.quadraticCurveTo(-player.width * 0.56, player.length * 0.45, -player.width * 0.54, player.length * 0.25);
+    // Kapı beli sol
+    ctx.quadraticCurveTo(-player.width * 0.44, 0, -player.width * 0.5, -player.length * 0.15);
+    // Ön çamurluk sol
+    ctx.quadraticCurveTo(-player.width * 0.56, -player.length * 0.35, -player.width * 0.38, -player.length * 0.5);
+    ctx.closePath();
+
+    // Gövde kaplama: Mat gece mavisi & metalik parlaklık
+    ctx.fillStyle = '#0f1423';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#00f3ff';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 10;
+    ctx.stroke();
+
+    // 5. ÖN KAPUT VE HAVA GİRİŞLERİ (HOOD SCOOPS)
+    ctx.fillStyle = '#171e35';
+    ctx.fillRect(-player.width * 0.25, -player.length * 0.42, player.width * 0.5, player.length * 0.18);
+    ctx.fillStyle = '#00f3ff';
+    ctx.fillRect(-player.width * 0.18, -player.length * 0.38, player.width * 0.36, 2);
+
+    // 6. AERODİNAMİK ÖN CAM (WINDSHIELD)
+    ctx.beginPath();
+    ctx.moveTo(-player.width * 0.34, -player.length * 0.2);
+    ctx.lineTo(player.width * 0.34, -player.length * 0.2);
+    ctx.lineTo(player.width * 0.28, -player.length * 0.02);
+    ctx.lineTo(-player.width * 0.28, -player.length * 0.02);
+    ctx.closePath();
+    ctx.fillStyle = '#00f3ff';
+    ctx.shadowColor = '#00f3ff';
+    ctx.shadowBlur = 8;
+    ctx.fill();
+
+    // 7. TAVAN PANELI (ROOF) & ARKA CAM
+    ctx.fillStyle = '#0b0f1a';
+    ctx.fillRect(-player.width * 0.28, -player.length * 0.02, player.width * 0.56, player.length * 0.2);
+    // Tavan neon yarış şeridi
+    ctx.fillStyle = '#ffe600';
+    ctx.fillRect(-1.5, -player.length * 0.02, 3, player.length * 0.2);
+
+    // Arka Cam
+    ctx.beginPath();
+    ctx.moveTo(-player.width * 0.26, player.length * 0.18);
+    ctx.lineTo(player.width * 0.26, player.length * 0.18);
+    ctx.lineTo(player.width * 0.22, player.length * 0.32);
+    ctx.lineTo(-player.width * 0.22, player.length * 0.32);
+    ctx.closePath();
+    ctx.fillStyle = '#00c3ff';
+    ctx.fill();
+
+    // 8. ARKA YARIŞ KANADI (SPOILER) & NEON ARKA STOP LAMBASI
+    ctx.fillStyle = '#1a1f33';
+    ctx.fillRect(-player.width * 0.45, player.length * 0.44, player.width * 0.9, 5);
+    // Kırmızı/Magenta LED Arka Işık Çubuğu (Tail light bar)
+    ctx.fillStyle = '#ff0055';
+    ctx.shadowColor = '#ff0055';
+    ctx.shadowBlur = 10;
+    ctx.fillRect(-player.width * 0.42, player.length * 0.47, player.width * 0.84, 3);
+
+    // 9. ÖN FARLAR (GTA 2 TARZI ÇİFT FAR IŞIK HUZMESİ)
+    ctx.save();
+    // Sol Far Huzmesi
+    ctx.beginPath();
+    ctx.moveTo(-player.width * 0.3, -player.length * 0.5);
+    ctx.lineTo(-player.width * 0.8, -player.length * 0.5 - 75);
+    ctx.lineTo(-player.width * 0.05, -player.length * 0.5 - 75);
+    ctx.closePath();
+    const gradL = ctx.createLinearGradient(0, -player.length * 0.5, 0, -player.length * 0.5 - 75);
+    gradL.addColorStop(0, 'rgba(0, 243, 255, 0.4)');
+    gradL.addColorStop(1, 'rgba(0, 243, 255, 0)');
+    ctx.fillStyle = gradL;
+    ctx.fill();
+
+    // Sağ Far Huzmesi
+    ctx.beginPath();
+    ctx.moveTo(player.width * 0.3, -player.length * 0.5);
+    ctx.lineTo(player.width * 0.8, -player.length * 0.5 - 75);
+    ctx.lineTo(player.width * 0.05, -player.length * 0.5 - 75);
+    ctx.closePath();
+    const gradR = ctx.createLinearGradient(0, -player.length * 0.5, 0, -player.length * 0.5 - 75);
+    gradR.addColorStop(0, 'rgba(0, 243, 255, 0.4)');
+    gradR.addColorStop(1, 'rgba(0, 243, 255, 0)');
+    ctx.fillStyle = gradR;
+    ctx.fill();
+    ctx.restore();
+
+    ctx.restore();
+}
+
+// TEK TİP SİBER LAZER BARİYERLERİ (NET VE ANLAŞILIR)
+function renderObstacles() {
+    const time = performance.now() * 0.005;
+
+    obstacles.forEach(obs => {
+        if (!obs.alive) return;
+        const ox = centerX + Math.cos(obs.angle) * obs.radius;
+        const oy = centerY + Math.sin(obs.angle) * obs.radius;
+        const tangent = obs.angle + Math.PI / 2;
+
+        ctx.save();
+        ctx.translate(ox, oy);
+        ctx.rotate(tangent);
+
+        // İki Uç Destek Direği
+        ctx.fillStyle = '#1c0f18';
+        ctx.strokeStyle = '#ff0044';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#ff0044';
+        ctx.shadowBlur = 10;
+
+        ctx.fillRect(-obs.width / 2, -6, 7, 12);
+        ctx.strokeRect(-obs.width / 2, -6, 7, 12);
+        ctx.fillRect(obs.width / 2 - 7, -6, 7, 12);
+        ctx.strokeRect(obs.width / 2 - 7, -6, 7, 12);
+
+        // Parlayan Kırmızı Lazer Işını
+        const pulse = Math.sin(time * 8 + obs.pulseTimer) * 1.5;
+        ctx.lineWidth = 3.5 + pulse;
+        ctx.strokeStyle = '#ff0044';
+        ctx.shadowColor = '#ff0044';
+        ctx.shadowBlur = 16;
+        ctx.beginPath();
+        ctx.moveTo(-obs.width / 2, 0);
+        ctx.lineTo(obs.width / 2, 0);
+        ctx.stroke();
+
+        // Beyaz Çekirdek
+        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.moveTo(-obs.width / 2 + 2, 0);
+        ctx.lineTo(obs.width / 2 - 2, 0);
+        ctx.stroke();
+
+        ctx.restore();
+    });
+}
+
+// SARI ALTIN COINLER (3D DÖNEN ENERJİ COINİ)
+function renderCoins() {
+    const time = performance.now() * 0.004;
+
+    coins.forEach(c => {
+        if (c.collected) return;
+        const cx = centerX + Math.cos(c.angle) * c.radius;
+        const cy = centerY + Math.sin(c.angle) * c.radius;
+
+        // 3D Dönüş Perspektif Ölçeği
+        const scaleX = Math.cos(time * 3 + c.rotation);
+
+        ctx.save();
+        ctx.translate(cx, cy);
+
+        // Dış Altın Parıltısı
+        ctx.beginPath();
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(255, 230, 0, 0.2)';
+        ctx.shadowColor = '#ffe600';
+        ctx.shadowBlur = 15;
+        ctx.fill();
+
+        // Dönen Altın Coin Gövdesi
+        ctx.scale(scaleX, 1);
+        ctx.beginPath();
+        ctx.arc(0, 0, 11, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffe600';
+        ctx.shadowColor = '#ffe600';
+        ctx.shadowBlur = 12;
+        ctx.fill();
+
+        // İç Jant & Sembol
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.strokeStyle = '#997300';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(-2, -5, 4, 10);
+
+        ctx.restore();
+    });
+}
+
+function renderTireMarks() {
+    ctx.save();
+    tireMarks.forEach(t => {
+        ctx.save();
+        ctx.translate(t.x, t.y);
+        ctx.rotate(t.angle);
+        ctx.fillStyle = `rgba(0, 243, 255, ${t.alpha * 0.35})`;
+        ctx.fillRect(-10, -8, 4, 16);
+        ctx.fillRect(6, -8, 4, 16);
+        ctx.restore();
+    });
+    ctx.restore();
+}
+
+function renderParticles() {
+    ctx.save();
+    particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 6;
+        ctx.globalAlpha = p.alpha;
+        ctx.fill();
+    });
+    ctx.restore();
+}
+
+function renderSpotlights() {
+    ctx.save();
+    const time = performance.now() * 0.001;
+    stadiumSpotlights.forEach(spot => {
+        const angle = spot.angle + Math.sin(time * spot.speed) * spot.sweepRange;
+        const originX = centerX + Math.cos(angle) * (TRACK.stadiumRadius + 40);
+        const originY = centerY + Math.sin(angle) * (TRACK.stadiumRadius + 40);
+        const targetX = centerX + Math.cos(angle + Math.PI) * (TRACK.outerRadius * 0.3);
+        const targetY = centerY + Math.sin(angle + Math.PI) * (TRACK.outerRadius * 0.3);
+
+        ctx.beginPath();
+        ctx.moveTo(originX, originY);
+        ctx.lineTo(targetX - 70, targetY);
+        ctx.lineTo(targetX + 70, targetY);
+        ctx.closePath();
+        ctx.fillStyle = spot.color;
+        ctx.fill();
+    });
+    ctx.restore();
+}
+
+function gameLoop(timestamp) {
+    const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+    lastTime = timestamp;
+
+    update(dt);
+    render();
+
+    requestAnimationFrame(gameLoop);
+}
+
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
